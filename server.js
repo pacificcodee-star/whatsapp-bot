@@ -4,12 +4,21 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
+// Render asigna el puerto mediante la variable PORT
+const PORT = process.env.PORT || 3000;
+
 create({
   sessionId: 'barber-session',
   multiDevice: true,
-  headless: false, // muestra el navegador para escanear QR
-}).then(client => {
+  headless: true,
+  useChrome: false,
+  qrTimeout: 0,
+}).then((client) => {
   console.log('WhatsApp conectado');
+
+  app.get('/', (req, res) => {
+    res.send('WhatsApp Bot activo');
+  });
 
   app.post('/send-message', async (req, res) => {
     try {
@@ -22,25 +31,25 @@ create({
         });
       }
 
-      // Formato requerido por WhatsApp
-      const chatId = `${to}@c.us`;
+      await client.sendText(`${to}@c.us`, message);
 
-      await client.sendText(chatId, message);
-
-      res.json({
+      return res.json({
         success: true,
         sent_to: to,
       });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({
+      console.error('Error enviando mensaje:', error);
+      return res.status(500).json({
         success: false,
         error: error.message,
       });
     }
   });
 
-  app.listen(3000, () => {
-    console.log('Servidor iniciado en http://localhost:3000');
+  app.listen(PORT, () => {
+    console.log(`Servidor iniciado en puerto ${PORT}`);
   });
+}).catch((error) => {
+  console.error('Error iniciando WhatsApp:', error);
+  process.exit(1);
 });
